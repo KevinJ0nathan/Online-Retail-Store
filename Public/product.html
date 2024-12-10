@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Details</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><a href="main.html" style="text-decoration: none; color: black;">Shoply</a></h1>
+      <div class="search-cart">
+        <input type="text" id="search-input" placeholder="Search at Shoply">
+        <button class="cart-btn">🛒</button>
+      </div>
+    </header>
+    <div class="product-main-content">
+      <!-- This is where the product details will be injected -->
+      <section id="product-details">
+        <!-- Product details will be dynamically inserted here -->
+      </section>
+      <section id="reviews">
+        <h2>Reviews</h2>
+        <div id="reviews-list">
+          <!-- Product reviews will be dynamically inserted here -->
+         </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Extract query parameters from URL
+    function getQueryParam(param) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(param);
+    }
+
+    // Get the product ID from the query string
+    const productId = getQueryParam('id');
+
+    // Counter functionality
+    function setupCounter(stockQuantity) {
+      const counterInput = document.getElementById('counter');
+      const incrementBtn = document.getElementById('increment');
+      const decrementBtn = document.getElementById('decrement');
+      const subtotalDisplay = document.querySelector('.subtotal');
+      const pricePerItem = parseFloat(document.querySelector('.price').textContent.replace('Rp', '').replace(/\./g, ''));
+
+      // Update subtotal
+      function updateSubtotal() {
+        const currentCount = parseInt(counterInput.value, 10);
+        subtotalDisplay.textContent = `Rp${(pricePerItem * currentCount).toLocaleString('id-ID', {
+          minimumFractionDigits: 3,
+          maximumFractionDigits: 3
+        })}`;
+      }
+
+      // Increment button click handler
+      incrementBtn.addEventListener('click', () => {
+        let currentValue = parseInt(counterInput.value, 10);
+        if (currentValue < stockQuantity) {
+          counterInput.value = currentValue + 1;
+          updateSubtotal();
+        }
+      });
+
+      // Decrement button click handler
+      decrementBtn.addEventListener('click', () => {
+        let currentValue = parseInt(counterInput.value, 10);
+        if (currentValue > 1) {
+          counterInput.value = currentValue - 1;
+          updateSubtotal();
+        }
+      });
+
+      // Initialize subtotal
+      updateSubtotal();
+    }
+
+    // Inside fetchProductDetails, call setupCounter
+    async function fetchProductDetails() {
+      try {
+        if (!productId) {
+          throw new Error('Product ID is missing.');
+        }
+
+        const response = await fetch(`/api/products/${productId}`);
+        const product = await response.json();
+
+        const responseReviewSummary = await fetch(`/api/reviewSummary/${productId}`);
+        const dataReviewSummary = await responseReviewSummary.json();
+
+        if (!product || Object.keys(product).length === 0) {
+          throw new Error('Product not found');
+        }
+
+        if (!dataReviewSummary || Object.keys(dataReviewSummary).length === 0) {
+          throw new Error('Review summary not available');
+        }
+
+        const productDetails = document.getElementById('product-details');
+        productDetails.innerHTML = `
+          <img src="https://via.placeholder.com/300" alt="${product.ProductName}">
+          <div class="product-information">
+          <h2>${product.ProductName}</h2>
+          <p><i class="fa-solid fa-star"></i> ${dataReviewSummary.averageRating.toFixed(1)}</p>
+          <h1 class="price">Rp${parseFloat(product.Price).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</h1>
+          <p class="description">${product.Description}</p>
+          </div>
+          <div class="buy-card">
+          <h3>Set the amount</h3>
+            <div class="counter-container">
+              <button id="decrement" class="counter-btn">−</button>
+              <input id="counter" class="counter-input" type="text" value="1" readonly />
+              <button id="increment" class="counter-btn">+</button>
+              <span class="stock-text">Total Stock: ${product.StockQuantity}</span>
+            </div>
+            <p>Subtotal</p>
+            <p class="subtotal">Rp1.000</p>
+            <button class="btn btn-green" onclick="addToCart(this)">+ Add to Cart</button>
+            <button class="btn btn-outline">Buy</button>
+          </div>
+        `;
+
+        // Initialize counter functionality
+        setupCounter(product.StockQuantity);
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+         // If there's an error, fetch the product details again to display basic information
+    try {
+      const response = await fetch(`/api/products/${productId}`);
+      const product = await response.json();
+      const productDetails = document.getElementById('product-details');
+      productDetails.innerHTML = `
+        <img src="https://via.placeholder.com/300" alt="${product.ProductName}">
+        <div class="product-information">
+          <h2>${product.ProductName}</h2>
+          <h1 class="price">Rp${parseFloat(product.Price).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</h1>
+          <p class="description">${product.Description}</p>
+        </div>
+        <div class="buy-card">
+          <h3>Set the amount</h3>
+          <div class="counter-container">
+            <button id="decrement" class="counter-btn">−</button>
+            <input id="counter" class="counter-input" type="text" value="1" readonly />
+            <button id="increment" class="counter-btn">+</button>
+            <span class="stock-text">Total Stock: ${product.StockQuantity}</span>
+          </div>
+          <p>Subtotal</p>
+          <p class="subtotal">Rp1.000</p>
+          <button class="btn btn-green">+ Add to Cart</button>
+          <button class="btn btn-outline">Buy</button>
+        </div>
+      `;
+       // Initialize counter functionality
+       setupCounter(product.StockQuantity);
+    } catch (retryError) {
+      console.error('Failed to fetch product details for display:', retryError);
+      const productDetails = document.getElementById('product-details');
+      productDetails.innerHTML = `Failed to fetch product details for display`
+    }
+      }
+    }
+
+        // Event listener for the search input (trigger on Enter key press)
+    document.getElementById('search-input').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        const searchTerm = event.target.value.trim();
+        if (searchTerm) {
+          // Redirect to the main page with the search query as a URL parameter
+          window.location.href = `main.html?search=${encodeURIComponent(searchTerm)}`;
+        }
+      }
+    });
+
+  // Function to add product to cart
+  async function addToCart(button) {
+  const quantityInput = document.getElementById('counter');
+  const quantity = parseInt(quantityInput.value, 10);
+
+  try {
+    const response = await fetch('/api/addToShoppingCart', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productId, quantity }),
+    });
+
+    console.log('Response status:', response.status); // Debugging
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('Error response:', errorBody); // Debugging
+      throw new Error('Failed to add item to shopping cart');
+    }
+
+    const data = await response.json();
+    alert(data.message); // Notify the user that the item was added successfully
+  } catch (error) {
+    console.error('Error adding to shopping cart:', error);
+    alert('An error occurred while adding the item to the shopping cart. Please try again.');
+  }
+}
+
+    async function fetchReviewSummary() {
+  try {
+    if (!productId) {
+      throw new Error('Product ID is missing.');
+    }
+
+    console.log('Fetching review summary for product ID:', productId);
+
+    const response = await fetch(`/api/reviewSummary/${productId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch review summary data.');
+    }
+
+    const data = await response.json();
+
+    if (!data || Object.keys(data).length === 0) {
+      throw new Error('Review data not found');
+    }
+
+    const reviewsList = document.getElementById('reviews-list');
+    if (!reviewsList) {
+      throw new Error('Reviews list element not found');
+    }
+
+    const reviewCard = document.createElement('div');
+    reviewCard.className = 'review-card';
+
+    // Rating header
+    const ratingHeader = `
+      <div class="rating-header">
+        <i class="fa-solid fa-star"></i>
+        <span class="rating-score">${data.averageRating.toFixed(1)}</span>
+        <span class="rating-max">/ 5.0</span>
+        <p class="rating-summary">${data.totalRatings} ratings • ${data.totalReviews} reviews</p>
+      </div>
+    `;
+
+      // Rating breakdown
+      let ratingBreakdown = '<div class="rating-breakdown">';
+
+if (typeof data.breakdown === 'object') {
+  // Assuming data.breakdown contains star counts directly
+  let i = 6
+  for (const stars in data.breakdown) {
+    i--;
+    const count = data.breakdown[stars];
+    const percentage = ((count / data.totalRatings) * 100).toFixed(1);
+    ratingBreakdown += `
+      <div class="rating-row">
+        <span class="star-label">${i}</span>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${percentage}%;"></div>
+        </div>
+        <span class="rating-count">(${count})</span>
+      </div>
+    `;
+  }
+} else {
+  // No valid breakdown data
+  ratingBreakdown += '<p>No reviews data available</p>';
+}
+
+ratingBreakdown += '</div>';
+
+    // Append everything to the review card
+    reviewCard.innerHTML = ratingHeader + ratingBreakdown;
+    reviewsList.appendChild(reviewCard);
+
+  } catch (error) {
+    console.error('Error fetching review summary details:', error);
+
+    const reviewsList = document.getElementById('reviews-list');
+    const reviewCard = document.createElement('div');
+    reviewCard.className = 'review-card';
+    reviewCard.innerHTML = `
+            <div class="rating-header-empty">
+              <h1>There are no reviews for this product yet</h1>
+              <p style="margin-top: 5px">Buy this product and be the first to leave a review</p>
+            </div>
+    `;
+    reviewsList.appendChild(reviewCard);
+  }
+}
+
+async function fetchReviews(productId) {
+  try {
+    const response = await fetch(`/api/reviews/${productId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch reviews');
+    }
+    const reviews = await response.json();
+    
+    const reviewsList = document.getElementById('reviews-list');
+    reviews.forEach(review => {
+    const reviewContainer = document.createElement('div');
+    reviewContainer.className = 'review-container';
+    const reviewHeader = document.createElement('div');
+    reviewHeader.className = 'review-header';
+
+    reviewContainer.append(reviewHeader);
+
+    // Create stars based on rating
+    const stars = document.createElement('div');
+    for (let i = 0; i < 5; i++) {
+      const star = document.createElement('i');
+      star.className = i < review.Rating ? 'fa-solid fa-star' : 'fa-regular fa-star';
+      stars.appendChild(star);
+    }
+    reviewHeader.appendChild(stars);
+
+    // Append timestamp
+    const timestamp = document.createElement('span');
+    timestamp.innerHTML = `&nbsp;- ${new Date(review.ReviewDate).toLocaleString()}`;
+    reviewHeader.appendChild(timestamp);
+
+    // Append reviewer name
+    const reviewerName = document.createElement('p');
+    reviewerName.style.marginTop = '10px';
+    reviewerName.innerHTML = `<strong>${review.firstName} ${review.lastName}</strong>`;
+    reviewContainer.appendChild(reviewerName);
+
+    // Append review text
+    const reviewText = document.createElement('p');
+    reviewText.style.marginTop = '10px';
+    reviewText.textContent = review.ReviewText;
+    reviewContainer.appendChild(reviewText);
+
+    // Append the review container to the list
+    reviewsList.appendChild(reviewContainer);
+  });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    // Optionally handle the error, e.g., display a message to the user
+  }
+}
+
+
+    // Call the function to load product details when the page loads
+  window.onload = function() {
+    fetchProductDetails();
+    fetchReviewSummary();
+    fetchReviews(productId);
+  };
+  </script>
+</body>
+</html>

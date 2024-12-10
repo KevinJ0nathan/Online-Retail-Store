@@ -11,10 +11,16 @@
     <header>
       <h1>Shoply</h1>
       <div class="search-cart">
-        <input type="text" placeholder="Search at Shoply">
+        <input type="text" id="search-input" placeholder="Search at Shoply">
         <button class="cart-btn">🛒</button>
       </div>
     </header>
+
+    <!-- New section for customer name -->
+    <section id="customer-info" style="padding: 10px; background: #f0f0f0; margin-top: 20px;">
+      <h3>Welcome, <span id="customer-name">Guest</span>!</h3>
+    </section>
+
     <div class="main-content">
       <aside class="filter-panel">
         <h3>Filter</h3>
@@ -28,36 +34,123 @@
           <input type="text" placeholder="Max price">
         </div>
         <div class="filter-rating">
-          <h4>Rating</h4>
+          <h5>Rating</h5>
           <label>
             <input type="checkbox"> 4★ and above
           </label>
         </div>
       </aside>
-      <section class="product-grid">
-        <!-- Product Cards -->
-        <div class="product-card">
-          <img src="https://via.placeholder.com/150" alt="Product">
-          <h3>On | Cloudmonster</h3>
-          <p class="price">Rp3.000.000</p>
-          <p class="rating">⭐ 5.0 | 250+ sold</p>
-        </div>
-        <!-- Duplicate product cards -->
-        <div class="product-card">
-          <img src="https://via.placeholder.com/150" alt="Product">
-          <h3>On | Cloudmonster</h3>
-          <p class="price">Rp3.000.000</p>
-          <p class="rating">⭐ 5.0 | 250+ sold</p>
-        </div>
-        <div class="product-card">
-          <img src="https://via.placeholder.com/150" alt="Product">
-          <h3>On | Cloudmonster</h3>
-          <p class="price">Rp3.000.000</p>
-          <p class="rating">⭐ 5.0 | 250+ sold</p>
-        </div>
-        <!-- Repeat more cards as needed -->
+      <section class="product-grid" id="product-grid">
+        <!-- Product cards will be injected here dynamically -->
       </section>
     </div>
   </div>
+
+  <script>
+   // Function to get customer details from the API
+    async function getCustomerName() {
+      try {
+        const response = await fetch('/api/customers/me');  // Use 'me' endpoint to get the current customer's data
+        if (!response.ok) {
+          throw new Error('Customer not found or not authenticated');
+        }
+
+        const customer = await response.json();
+        return customer.FirstName;  // Return the name from the customer data
+      } catch (error) {
+        console.error(error);
+        return null;  // Return null if there is an error (e.g., customer not found)
+      }
+    }
+
+    // Function to display customer name
+    async function displayCustomerName() {
+      const customerName = await getCustomerName();  // Fetch the name based on session data
+      if (customerName) {
+        document.getElementById('customer-name').textContent = customerName;  // Set the customer name
+      } else {
+        document.getElementById('customer-name').textContent = 'Guest';  // Default to 'Guest' if the name is not found
+      }
+    }
+
+  
+    // Fetch products (existing code)
+async function fetchProducts() {
+  try {
+    const response = await fetch('/api/products');  // Fetch products from the API
+    const products = await response.json();  // Parse JSON response
+
+    const productGrid = document.getElementById('product-grid');
+    productGrid.innerHTML = '';  // Clear existing content
+
+    // Store products globally so we can filter them later
+    window.allProducts = products;
+
+       // Check for search query in the URL
+       const searchQuery = new URLSearchParams(window.location.search).get('search');
+        
+        // If there is a search query, filter products based on it
+        if (searchQuery) {
+          const filteredProducts = products.filter(product => 
+            product.ProductName.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+          displayProducts(filteredProducts);
+        } else {
+          displayProducts(products);  // Display all products if no search query
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+}
+
+// Function to display products on the page
+function displayProducts(products) {
+  const productGrid = document.getElementById('product-grid');
+  productGrid.innerHTML = '';  // Clear the existing product grid
+
+  products.forEach(product => {
+    const productCard = document.createElement('div');
+    productCard.classList.add('product-card');
+
+    productCard.innerHTML = `
+      <a href="product.html?id=${product.ProductID}" class="product-link">
+        <img src="https://via.placeholder.com/150" alt="${product.ProductName}">
+        <h3>${product.ProductName}</h3>
+        <p class="price">Rp${parseFloat(product.Price).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</p>
+        <p class="stock">Stock: ${product.StockQuantity}</p>
+      </a>
+    `;
+
+    productGrid.appendChild(productCard);  // Add product card to the grid
+  });
+}
+
+// Search function to filter products based on input
+function searchProducts(query) {
+  const filteredProducts = window.allProducts.filter(product => {
+    return product.ProductName.toLowerCase().includes(query.toLowerCase());
+  });
+
+  displayProducts(filteredProducts);  // Display the filtered products
+}
+
+// Event listener for the search input (trigger on Enter key press)
+document.getElementById('search-input').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {  // Check if Enter key was pressed
+    searchProducts(event.target.value);  // Call search function with the input value
+  }
+});
+
+// Fetch products initially
+fetchProducts();
+
+  
+    // Call the function to fetch products and display customer info on page load
+    window.onload = async () => {
+      await displayCustomerName();  // Display customer name based on session
+      fetchProducts();  // Fetch products to show
+    };
+  </script>
+  
 </body>
 </html>

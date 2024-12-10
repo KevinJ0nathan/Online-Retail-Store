@@ -20,7 +20,32 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 20px;
+}
+
+.search-cart {
+  position: relative;
+}
+
+#search-input {
+  padding-left: 40px; /* Add space for the icon */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+  
+.search-cart::before {
+  content: ''; 
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px; 
+  height: 18px; 
+  background-image: url('assets/magnifying-glass-solid.svg'); 
+  background-size: contain;
+  background-repeat: no-repeat;
 }
 
 header h1 {
@@ -52,6 +77,12 @@ header h1 {
 
 .main-content {
   display: flex;
+}
+
+.product-main-content{
+  display: flex;
+  gap: 100px;
+  flex-direction: column;
 }
 
 .filter-panel {
@@ -122,4 +153,224 @@ header h1 {
 .product-card .rating {
   font-size: 14px;
   color: #777;
+}
+
+#product-details{
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.product-information h1.price {
+  font-size: 32px;
+}
+
+.fa-star{
+  color: rgb(255, 208, 0);
+}
+
+.price{
+  margin: 20px 0px;
+}
+
+.buy-card {
+  font-family: Arial, sans-serif;
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 8px;
+  width: 300px;
+  position: -webkit-sticky; /* For Safari */
+  position: sticky;
+  top: 0;
+  z-index: 1000; /* Ensure it's above other content */
+}
+
+.counter-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  margin-top: 15px;
+}
+
+.counter-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ccc;
+  background-color: #f8f8f8;
+  font-size: 18px;
+  text-align: center;
+  line-height: 30px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.counter-btn:hover {
+  background-color: #e6e6e6;
+}
+
+.counter-input {
+  width: 50px;
+  text-align: center;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.stock-text {
+  font-size: 14px;
+  color: #888;
+  margin-left: 10px;
+}
+
+.subtotal {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.btn-green {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.btn-green:hover {
+  background-color: #218838;
+}
+
+.btn-outline {
+  background-color: #fff;
+  border: 1px solid #28a745;
+  color: #28a745;
+}
+
+.btn-outline:hover {
+  background-color: #e6f7e6;
+}
+
+.review-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+}
+
+.rating-header {
+  font-size: 2rem;
+  font-weight: bold;
+  align-items: baseline;
+  color: #000000;
+}
+
+.rating-header .rating-max {
+  font-size: 1.2rem;
+  color: #666;
+  margin-left: 5px;
+}
+
+.rating-summary {
+  font-size: 1rem;
+  color: #333;
+  margin: 5px 0;
+}
+
+.rating-meta {
+  font-size: 0.9rem;
+  color: #999;
+  margin-bottom: 15px;
+}
+
+.rating-breakdown {
+  font-size: 0.9rem;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  margin: 8px 0;
+}
+
+.star-label {
+  width: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+.progress-bar {
+  flex-grow: 1;
+  background: #eee;
+  border-radius: 4px;
+  height: 8px;
+  margin: 0 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill {
+  background: #76c7c0;
+  height: 100%;
+  border-radius: 4px 0 0 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.rating-count {
+  width: 40px; 
+  text-align: right; 
+  color: #666;
+}
+
+.review-container {
+  margin: 30px 0px;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1)
+}
+
+.review-header{
+  display: flex;
+  align-items: center;
+}
+
+@media only screen and (max-width: 430px) {
+  header{
+    flex-direction: column;
+    gap: 20px
+  }
+}
+
+@media only screen and (max-width: 500px) {
+  .product-information{
+    width: 80%;
+  }
+}
+
+@media only screen and (max-width: 768px) {
+  .filter-panel{
+    display: none;
+  }
+}
+
+@media only screen and (max-width: 766px) {
+  #product-details{
+    justify-content: space-evenly;
+    gap: 50px;
+  }
 }

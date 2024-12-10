@@ -1,83 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Data</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #f4f4f4;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    tr:hover {
-      background-color: #f1f1f1;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Login</title>
+    <link rel="stylesheet" href="Registration.css">
 </head>
 <body>
-  <h1>Customer List</h1>
-  <table id="customerTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Phone</th>
-      </tr>
-    </thead>
-    <tbody id="data-body">
-      <!-- Data will be dynamically populated here -->
-    </tbody>
-  </table>
+    <div class="container">
+        <h1>Customer Login</h1>
+        <form id="loginForm">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required>
 
-  <script>
-    async function fetchData() {
-      try {
-        const response = await fetch('/data'); // Ensure this endpoint serves valid JSON
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required>
 
-        const data = await response.json();
-        const tableBody = document.getElementById('data-body');
-        tableBody.innerHTML = ''; // Clear existing content
+            <button type="submit">Login</button>
+        </form>
 
-        // Dynamically populate rows
-        data.forEach(row => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${row.CustomerID}</td>
-            <td>${row.FirstName}</td>
-            <td>${row.Email}</td>
-            <td>${row.PhoneNumber || 'N/A'}</td>
-          `;
-          tableBody.appendChild(tr);
+        <!-- Register now link -->
+        <p>Don't have an account? 
+            <a href="Registration.html" id="register-link" style="color: blue; text-decoration: underline;">Register now</a>
+        </p>
+
+        <!-- Error message element -->
+        <p id="error-message" style="color: red;"></p>
+    </div>
+
+    <script>
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('http://localhost:3000/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                // If login is successful, alert the user
+                if (response.status === 200) {
+                    window.location.href = '/main.html';
+                    alert('Login successful');
+                } else {
+                    // Display error message if login failed
+                    document.getElementById('error-message').textContent = data.message;
+                }
+            } catch (error) {
+                // In case of a network error or other issues, display a generic error
+                document.getElementById('error-message').textContent = "An error occurred. Please try again.";
+            }
         });
-      } catch (error) {
-        console.error('Error fetching customer data:', error);
-        document.getElementById('data-body').innerHTML = `
-          <tr><td colspan="4">Error loading data. Please try again later.</td></tr>
-        `;
-      }
-    }
-
-    window.onload = fetchData;
-  </script>
+    </script>
 </body>
 </html>
