@@ -13,6 +13,7 @@
       <div class="search-cart">
         <input type="text" id="search-input" placeholder="Search at Shoply">
         <button class="cart-btn">🛒</button>
+        <button class="settings-btn">⚙️</button>
       </div>
     </header>
 
@@ -26,18 +27,10 @@
         <h3>Filter</h3>
         <div class="filter-category">
           <h4>Category</h4>
-          <!-- Add category options here if needed -->
-        </div>
-        <div class="filter-price">
-          <h4>Price</h4>
-          <input type="text" placeholder="Min price">
-          <input type="text" placeholder="Max price">
-        </div>
-        <div class="filter-rating">
-          <h5>Rating</h5>
-          <label>
-            <input type="checkbox"> 4★ and above
-          </label>
+          <div class="filter-buttons" id="category-filter">
+            <!-- Categories buttons will be populated here -->
+          </div>
+          <button id="remove-filters">Remove All Filters</button>
         </div>
       </aside>
       <section class="product-grid" id="product-grid">
@@ -47,6 +40,11 @@
   </div>
 
   <script>
+
+    document.querySelector('.settings-btn').addEventListener('click', function() {
+          // Redirect to settings.html
+          window.location.href = 'settings.html';
+        });
    // Function to get customer details from the API
     async function getCustomerName() {
       try {
@@ -61,6 +59,36 @@
         console.error(error);
         return null;  // Return null if there is an error (e.g., customer not found)
       }
+    }
+
+     // Function to fetch categories and populate the buttons
+    async function fetchCategories() {
+      try {
+        const response = await fetch('/api/categories');  // API endpoint for categories
+        const categories = await response.json();
+
+        const categoryFilter = document.getElementById('category-filter');
+        categories.forEach(category => {
+          const button = document.createElement('button');
+          button.textContent = category.CategoryName;
+          button.dataset.categoryId = category.CategoryID;
+          button.addEventListener('click', () => filterProductsByCategory(category.CategoryID));
+          categoryFilter.appendChild(button);
+        });
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    }
+
+    // Function to filter products based on selected category
+    function filterProductsByCategory(categoryId) {
+      const filteredProducts = window.allProducts.filter(product => product.CategoryID === categoryId);
+      displayProducts(filteredProducts);  // Display the filtered products
+    }
+
+    // Function to remove all category filters
+    function removeAllFilters() {
+      displayProducts(window.allProducts);  // Show all products
     }
 
     // Function to display customer name
@@ -114,7 +142,7 @@ function displayProducts(products) {
 
     productCard.innerHTML = `
       <a href="product.html?id=${product.ProductID}" class="product-link">
-        <img src="https://via.placeholder.com/150" alt="${product.ProductName}">
+        <img src="${product.ImageDirectory}" alt="${product.ProductName}" style="width: 150px; height: 150px;">
         <h3>${product.ProductName}</h3>
         <p class="price">Rp${parseFloat(product.Price).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</p>
         <p class="stock">Stock: ${product.StockQuantity}</p>
@@ -141,13 +169,13 @@ document.getElementById('search-input').addEventListener('keydown', function(eve
   }
 });
 
-// Fetch products initially
-fetchProducts();
-
+// Event listener for removing all filters
+document.getElementById('remove-filters').addEventListener('click', removeAllFilters);
   
     // Call the function to fetch products and display customer info on page load
     window.onload = async () => {
       await displayCustomerName();  // Display customer name based on session
+      fetchCategories();
       fetchProducts();  // Fetch products to show
     };
   </script>

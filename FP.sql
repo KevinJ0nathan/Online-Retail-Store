@@ -16,6 +16,7 @@ ProductName VARCHAR(255) NOT NULL,
 Description TEXT,
 Price Decimal(10,3) NOT NULL,
 StockQuantity INT NOT NULL,
+ImageDirectory VARCHAR(255),
 FOREIGN KEY (CategoryID) REFERENCES Categories(CategoryID)
 );
 

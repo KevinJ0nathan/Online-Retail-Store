@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile Settings</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #f3f3f3;
+    }
+    form {
+      max-width: 400px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #profile-form {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #back-button {
+      margin-top: 15px;
+      margin-bottom: 15px;
+      background-color: #6c757d;
+    }
+
+    #back-button:hover {
+      background-color: #565e64;
+    }
+  </style>
+</head>
+<body>
+  <h1>Profile Settings</h1>
+  <form id="profile-form">
+    <label for="firstName">First Name:</label>
+    <input type="text" id="firstName" name="firstName">
+  
+    <label for="lastName">Last Name:</label>
+    <input type="text" id="lastName" name="lastName">
+  
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email">
+  
+    <label for="phoneNumber">Phone Number:</label>
+    <input type="text" id="phoneNumber" name="phoneNumber" pattern="[0-9]{10,15}">
+  
+    <label for="address">Address:</label>
+    <input type="text" id="address" name="address">
+  
+    <label for="password">Password (Leave blank to keep current):</label>
+    <input type="password" id="password" name="password" minlength="8">
+  
+    <button type="submit">Update Profile</button>
+    <button id="back-button">Back</button>
+  </form>
+  
+  <script>
+    // Back Button Functionality
+    document.getElementById('back-button').addEventListener('click', () => {
+      window.history.back();
+    });
+
+    // Fetch profile data and populate the form
+    window.addEventListener('DOMContentLoaded', () => {
+      fetch('/profile')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Failed to fetch profile data');
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Populate form fields with user data
+          document.getElementById('firstName').value = data.FirstName || '';
+          document.getElementById('lastName').value = data.LastName || '';
+          document.getElementById('email').value = data.Email || '';
+          document.getElementById('phoneNumber').value = data.PhoneNumber || '';
+          document.getElementById('address').value = data.Address || '';
+        })
+        .catch(error => console.error('Error loading profile data:', error));
+    });
+
+    // Handle form submission
+    document.getElementById('profile-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const data = {};
+
+      // Only include fields with new values
+      formData.forEach((value, key) => {
+        if (value.trim() !== '') {
+          data[key] = value;
+        }
+      });
+
+      fetch('/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+      .then(response => {
+        if (response.ok) {
+          return response.text().then(() => "Profile updated successfully");
+        } else {
+          return response.text().then(() => "Profile failed to update");
+        }
+      })
+      .then(message => {
+        alert(message);
+        document.getElementById('password').value = ''; // Clear password field after update
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  </script>
+</body>
+</html>

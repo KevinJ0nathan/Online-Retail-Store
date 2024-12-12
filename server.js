@@ -62,6 +62,13 @@ app.get('/product.html', ensureAuthenticated, (req, res) => {
   res.sendFile(path.join(__dirname, 'Public/product.html'));
 });
 
+app.get('/settings.html', ensureAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, 'Public/settings.html'));
+});
+
+app.get('/profile.html', ensureAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, 'Public/profile.html'));
+});
 
 // POST endpoint to handle registration form submission
 app.post('/register', (req, res) => {
@@ -125,6 +132,18 @@ app.post('/login', (req, res) => {
   });
 });
 
+app.get('/reset-session', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying session:", err);
+      res.status(500).send("Could not reset session.");
+    } else {
+      res.redirect('/'); 
+    }
+  });
+});
+
+
 app.get('/profile', (req, res) => {
   if (!req.session.customerid) {
     return res.status(401).json({ message: 'Not authenticated' });
@@ -142,6 +161,65 @@ app.get('/profile', (req, res) => {
 
     // Return user profile information
     res.json(results[0]);
+  });
+});
+
+// PUT endpoint to update user profile
+app.put('/profile', (req, res) => {
+  if (!req.session.customerid) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+
+  const customerId = req.session.customerid;
+  const { firstName, lastName, email, phoneNumber, address, password } = req.body;
+
+  // Build the update query dynamically based on provided fields
+  const fields = [];
+  const values = [];
+
+  if (firstName) {
+    fields.push('FirstName = ?');
+    values.push(firstName);
+  }
+  if (lastName) {
+    fields.push('LastName = ?');
+    values.push(lastName);
+  }
+  if (email) {
+    fields.push('Email = ?');
+    values.push(email);
+  }
+  if (phoneNumber) {
+    fields.push('PhoneNumber = ?');
+    values.push(phoneNumber);
+  }
+  if (address) {
+    fields.push('Address = ?');
+    values.push(address);
+  }
+  if (password) {
+    fields.push('Password = ?');
+    values.push(password);
+  }
+
+  if (fields.length === 0) {
+    return res.status(400).json({ message: 'No fields to update' });
+  }
+
+  const query = `UPDATE Customers SET ${fields.join(', ')} WHERE CustomerID = ?`;
+  values.push(customerId);
+
+  db.query(query, values, (err, result) => {
+    if (err) {
+      console.error('Database error updating profile:', err);
+      return res.status(500).json({ message: 'Failed to update profile' });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    res.json({ message: 'Profile updated successfully' });
   });
 });
 
@@ -178,13 +256,27 @@ app.get('/api/products', (req, res) => {
   });
 });
 
+// API endpoint to fetch category data
+app.get('/api/categories', (req, res) => {
+  const query = 'SELECT * FROM Categories'
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error('Error fetching categories:', err);
+      return res.status(500).json({error: 'Failed to fetch categories'});
+    }
+
+    res.json(results);
+  });
+});
+
 // API endpoint to fetch product data
 app.get('/api/product_reviews', (req, res) => {
   const query = 'SELECT * FROM Reviews';
 
   db.query(query, (err, results) => {
     if (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching product reviews:', err);
       return res.status(500).json({ error: 'Failed to fetch reviews' });
     }
 

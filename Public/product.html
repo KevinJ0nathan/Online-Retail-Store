@@ -14,6 +14,7 @@
       <div class="search-cart">
         <input type="text" id="search-input" placeholder="Search at Shoply">
         <button class="cart-btn">🛒</button>
+        <button class="settings-btn">⚙️</button>
       </div>
     </header>
     <div class="product-main-content">
@@ -39,6 +40,12 @@
 
     // Get the product ID from the query string
     const productId = getQueryParam('id');
+
+    document.querySelector('.settings-btn').addEventListener('click', function() {
+      // Redirect to settings.html
+      window.location.href = 'settings.html';
+    });
+
 
     // Counter functionality
     function setupCounter(stockQuantity) {
@@ -102,7 +109,7 @@
 
         const productDetails = document.getElementById('product-details');
         productDetails.innerHTML = `
-          <img src="https://via.placeholder.com/300" alt="${product.ProductName}">
+          <img src="${product.ImageDirectory}" alt="${product.ProductName}" style="width: 300px; height: auto;">
           <div class="product-information">
           <h2>${product.ProductName}</h2>
           <p><i class="fa-solid fa-star"></i> ${dataReviewSummary.averageRating.toFixed(1)}</p>
@@ -134,7 +141,7 @@
       const product = await response.json();
       const productDetails = document.getElementById('product-details');
       productDetails.innerHTML = `
-        <img src="https://via.placeholder.com/300" alt="${product.ProductName}">
+        <img src="${product.ImageDirectory}" alt="${product.ProductName}" style="width: 300px; height: auto;">
         <div class="product-information">
           <h2>${product.ProductName}</h2>
           <h1 class="price">Rp${parseFloat(product.Price).toLocaleString('id-ID', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</h1>
@@ -150,7 +157,7 @@
           </div>
           <p>Subtotal</p>
           <p class="subtotal">Rp1.000</p>
-          <button class="btn btn-green">+ Add to Cart</button>
+          <button class="btn btn-green" onclick="addToCart(this)">+ Add to Cart</button>
           <button class="btn btn-outline">Buy</button>
         </div>
       `;
@@ -176,10 +183,15 @@
     });
 
   // Function to add product to cart
-  async function addToCart(button) {
+  async function addToCart(button) {  
   const quantityInput = document.getElementById('counter');
   const quantity = parseInt(quantityInput.value, 10);
 
+  const response = await fetch(`/api/products/${productId}`);
+  const product = await response.json();
+
+  console.log('Checking StockQuantity:', product.StockQuantity);
+  if (Number(product.StockQuantity) > 0) {
   try {
     const response = await fetch('/api/addToShoppingCart', {
       method: 'POST',
@@ -202,6 +214,9 @@
     console.error('Error adding to shopping cart:', error);
     alert('An error occurred while adding the item to the shopping cart. Please try again.');
   }
+} else{
+  alert('Product is out of stock, please check again later.');
+}
 }
 
     async function fetchReviewSummary() {
