@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Write a Review</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #f3f3f3;
+    }
+    form {
+      max-width: 400px;
+      margin: auto;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+    }
+    input, textarea {
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #review-form {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 20px 30px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      width: 80%;
+    }
+
+    #back-button {
+      margin-top: 15px;
+      margin-bottom: 15px;
+      background-color: #6c757d;
+    }
+
+    #back-button:hover {
+      background-color: #565e64;
+    }
+
+    .star-rating {
+      display: flex;
+      flex-direction: row-reverse;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    .star-rating input[type="radio"] {
+      display: none;
+    }
+
+    .star-rating label {
+      font-size: 2rem;
+      color: #ccc;
+      cursor: pointer;
+    }
+
+    .star-rating input[type="radio"]:checked ~ label {
+      color: #f5c518;
+    }
+
+    .star-rating label:hover,
+    .star-rating label:hover ~ label {
+      color: #f5c518;
+    }
+
+    #productName {
+      font-size: 16px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Write a Review</h1>
+  <form id="review-form">
+    <label for="productName">Product Name:</label>
+    <p id="productName"></p>
+
+    <label for="rating">Rating:</label>
+    <div class="star-rating">
+      <input type="radio" id="star5" name="rating" value="5">
+      <label for="star5">&#9733;</label>
+      <input type="radio" id="star4" name="rating" value="4">
+      <label for="star4">&#9733;</label>
+      <input type="radio" id="star3" name="rating" value="3">
+      <label for="star3">&#9733;</label>
+      <input type="radio" id="star2" name="rating" value="2">
+      <label for="star2">&#9733;</label>
+      <input type="radio" id="star1" name="rating" value="1">
+      <label for="star1">&#9733;</label>
+    </div>
+
+    <label for="reviewText">Your Review:</label>
+    <textarea id="reviewText" name="reviewText" required></textarea>
+
+    <button type="submit">Submit Review</button>
+    <button id="back-button">Back</button>
+  </form>
+
+  <script>
+    // Back Button Functionality
+    document.getElementById('back-button').addEventListener('click', () => {
+      window.history.back();
+    });
+
+    // Get productId from URL
+    const productId = new URL(window.location.href).searchParams.get('id');
+    console.log('Extracted productId:', productId);
+    // Check if the review already exists for this product
+    const reviewExists =  checkReviewExists(productId);
+
+    if (productId) {
+      // Fetch product name based on productId from the database
+      fetch(`/api/products/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('productName').textContent = data.ProductName;
+          return reviewExists;
+        })
+        .catch(error => console.error('Error fetching product name:', error));
+    } else {
+      console.log('Product ID is missing');
+    }
+
+    async function checkReviewExists(productId) {
+      try {
+        const response = await fetch(`/api/reviews/${productId}`);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const reviews = await response.json();
+
+        if (reviews.length > 0) {
+          const customerReviewResponse = await fetch(`/api/customerReview/${productId}`);
+          const customerReviewData = await customerReviewResponse.json();
+
+          if (typeof customerReviewData === 'object' && customerReviewData !== null) {
+            console.log(customerReviewData)
+            updateForm(customerReviewData);  // Update form with the customer's review
+            return true;
+          }
+
+        }
+
+        return false; // No reviews exist
+      } catch (error) {
+        console.error('Error checking review existence:', error);
+        return false;
+      }
+    }
+
+    function updateForm(reviewData) {
+        // Set the review text
+        if (reviewData && reviewData.ReviewText !== undefined) {
+            document.getElementById('reviewText').value = reviewData.ReviewText;
+        }
+
+        // Set the rating
+        if (reviewData && reviewData.Rating !== undefined) {
+            // Clear all radio buttons
+            document.querySelectorAll('.star-rating input[type="radio"]').forEach(radio => {
+            radio.checked = false;
+            });
+
+            // Find the radio button that matches the review's rating and check it
+            document.getElementById(`star${reviewData.Rating}`).checked = true;}
+            }
+        console.log("apple")
+
+    // Handle form submission
+    document.getElementById('review-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const formData = new FormData(event.target);
+      const data = {};
+
+      formData.forEach((value, key) => {
+        data[key] = value;
+      });
+
+    
+      if (reviewExists) {
+        // If review exists, update it with PUT request
+        const customerReviewResponse = await fetch(`/api/customerReview/${productId}`);
+        const customerReviewData = await customerReviewResponse.json();
+        fetch(`/api/reviews/${customerReviewData.ReviewID}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        .then(response => {
+          if (response.ok) {
+            updateForm(data);
+            alert('Review updated successfully.');
+
+          } else {
+            alert('Failed to update review.');
+          }
+        })
+        .catch(error => console.error('Error:', error));
+      } else {
+        // If review does not exist, create it with POST request
+        fetch(`/api/reviews/${productId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        })
+        .then(response => {
+          if (response.ok) {
+            alert('Review submitted successfully.');
+          } else {
+            alert('Failed to submit review.');
+          }
+        })
+        .catch(error => console.error('Error:', error));
+      }
+    });
+  </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ const mysql = require('mysql');
 const path = require('path');
 const bodyParser = require('body-parser')
 const session = require('express-session');
+const bcrypt = require('bcrypt'); 
 
 const app = express();
 const PORT = 3000;
@@ -71,65 +72,86 @@ app.get('/profile.html', ensureAuthenticated, (req, res) => {
 });
 
 // POST endpoint to handle registration form submission
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   const { firstName, lastName, email, phoneNumber, address, password } = req.body;
 
-  // Check if email already exists
-  const checkEmailQuery = `SELECT * FROM Customers WHERE email = ?`;
-
-  db.query(checkEmailQuery, [email], (err, results) => {
-    if (err) {
-      console.error('Error checking email:', err);
-      return res.status(500).send('Error checking email');
-    }
+  try {
+    // Check if email already exists
+    const checkEmailQuery = `SELECT * FROM Customers WHERE email = ?`;
+    const results = await new Promise((resolve, reject) => {
+      db.query(checkEmailQuery, [email], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
 
     if (results.length > 0) {
       return res.status(400).send('Email already in use');
     }
 
-      // Insert new customer
-      const query = `INSERT INTO Customers (firstName, lastName, email, phoneNumber, address, password) 
-                     VALUES (?, ?, ?, ?, ?, ?)`;
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-      db.query(query, [firstName, lastName, email, phoneNumber, address, password], (err, result) => {
-        if (err) {
-          console.error('Error inserting data:', err);
-          return res.status(500).send('Error inserting data into database');
-        }
-        res.status(200).send('Customer registered successfully');
+    // Insert new customer with hashed password
+    const query = `INSERT INTO Customers (firstName, lastName, email, phoneNumber, address, password) 
+                   VALUES (?, ?, ?, ?, ?, ?)`;
+    await new Promise((resolve, reject) => {
+      db.query(query, [firstName, lastName, email, phoneNumber, address, hashedPassword], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
       });
     });
-  });
 
-// Login route (plain text password)
-app.post('/login', (req, res) => {
+    res.status(200).send('Customer registered successfully');
+  } catch (error) {
+    console.error('Error registering customer:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
   }
 
-  // Query to check if the email exists in the database
-  db.query('SELECT * FROM Customers WHERE email = ?', [email], (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: 'Database error', error: err });
-    }
+  try {
+    // Query to check if the email exists in the database
+    const results = await new Promise((resolve, reject) => {
+      db.query('SELECT * FROM Customers WHERE email = ?', [email], (err, results) => {
+        if (err) reject(err);
+        else resolve(results);
+      });
+    });
 
     if (results.length === 0) {
       return res.status(404).json({ message: 'Email not found' });
     }
 
     const user = results[0];
-    
-    if (password === user.Password) {
-      // Store customer ID in the session
-      req.session.customerid = user.CustomerID;
-      console.log('Customer ID saved to session:', req.session.customerid);
-      res.status(200).json({ message: 'Login successful', redirectUrl: '/main.html' });
-    } else {
-      res.status(401).json({ message: 'Invalid password' });
+    console.log('Fetched user:', user); // Log the fetched user object
+
+    // Check if the Password field exists and has a value
+    if (!user.Password) {
+      console.error('Password hash missing from database');
+      return res.status(500).json({ message: 'Password hash missing in database' });
     }
-  });
+
+    // Compare the hashed password with the provided one
+    const isPasswordMatch = await bcrypt.compare(password, user.Password);
+    if (!isPasswordMatch) {
+      return res.status(401).json({ message: 'Invalid password' });
+    }
+
+    // Store customer ID in the session
+    req.session.customerid = user.CustomerID;
+    console.log('Customer ID saved to session:', req.session.customerid);
+    res.status(200).json({ message: 'Login successful', redirectUrl: '/main.html' });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 app.get('/reset-session', (req, res) => {
@@ -165,7 +187,7 @@ app.get('/profile', (req, res) => {
 });
 
 // PUT endpoint to update user profile
-app.put('/profile', (req, res) => {
+app.put('/profile', async (req, res) => {
   if (!req.session.customerid) {
     return res.status(401).json({ message: 'Not authenticated' });
   }
@@ -198,8 +220,15 @@ app.put('/profile', (req, res) => {
     values.push(address);
   }
   if (password) {
-    fields.push('Password = ?');
-    values.push(password);
+    try {
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      fields.push('Password = ?');
+      values.push(hashedPassword);
+    } catch (err) {
+      console.error('Error hashing password:', err);
+      return res.status(500).json({ message: 'Failed to hash password' });
+    }
   }
 
   if (fields.length === 0) {
@@ -222,6 +251,7 @@ app.put('/profile', (req, res) => {
     res.json({ message: 'Profile updated successfully' });
   });
 });
+
 
 
 app.get('/api/products/:id', (req, res) => {
@@ -266,21 +296,6 @@ app.get('/api/categories', (req, res) => {
       return res.status(500).json({error: 'Failed to fetch categories'});
     }
 
-    res.json(results);
-  });
-});
-
-// API endpoint to fetch product data
-app.get('/api/product_reviews', (req, res) => {
-  const query = 'SELECT * FROM Reviews';
-
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Error fetching product reviews:', err);
-      return res.status(500).json({ error: 'Failed to fetch reviews' });
-    }
-
-    // Send the product data as JSON
     res.json(results);
   });
 });
@@ -387,7 +402,7 @@ app.get('/api/reviewSummary/:productId', (req, res) => {
   });
 });
 
-// API endpoint to fetch reviews data with customer details for a specific product
+// API endpoint to fetch all review data with customer details for a specific product
 app.get('/api/reviews/:productId', (req, res) => {
   const productId = req.params.productId;
 
@@ -414,6 +429,97 @@ app.get('/api/reviews/:productId', (req, res) => {
     res.json(results);
   });
 });
+
+// PUT endpoint to update a review
+app.put('/api/reviews/:reviewId', ensureAuthenticated, async (req, res) => {
+  const reviewId = req.params.reviewId;
+  const { rating, reviewText } = req.body;
+
+  if (!rating || !reviewText) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const query = `
+      UPDATE Reviews
+      SET Rating = ?, ReviewText = ?, ReviewDate = NOW()
+      WHERE ReviewID = ? AND CustomerID = ?`;
+    
+    db.query(query, [rating, reviewText, reviewId, req.session.customerid], (err, result) => {
+      if (err) {
+        console.error('Error updating review:', err);
+        return res.status(500).json({ error: 'Failed to update review' });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: 'Review not found or not authorized to update' });
+      }
+
+      res.status(200).json({ message: 'Review updated successfully' });
+    });
+  } catch (error) {
+    console.error('Error processing review update:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST endpoint to add a review
+app.post('/api/reviews/:productId', ensureAuthenticated, async (req, res) => {
+  const {rating, reviewText } = req.body;
+  const productId = req.params.productId;
+  const customerId = req.session.customerid;
+
+  if (!customerId || !productId || !rating || !reviewText) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const query = `INSERT INTO Reviews (ProductID, CustomerID, Rating, ReviewText, ReviewDate) VALUES (?, ?, ?, ?, NOW())`;
+    db.query(query, [productId, customerId, rating, reviewText], (err, result) => {
+      if (err) {
+        console.error('Error adding review:', err);
+        return res.status(500).json({ error: 'Failed to add review' });
+      }
+
+      res.status(201).json({ message: 'Review added successfully' });
+    });
+  } catch (error) {
+    console.error('Error processing review:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// API TO GET A SPECIFIC REVIEW FOR A PRODUCT FROM A CUSTOMER
+app.get('/api/customerReview/:productId', ensureAuthenticated, (req, res) => {
+  const productId = req.params.productId;
+  const customerId = req.session.customerid;
+
+  if (!customerId) {
+    return res.status(401).json({ error: 'Unauthorized: No customer ID in session' });
+  }
+
+  // Query to fetch the customer's review for the specified product
+  const query = `
+    SELECT ReviewID, Rating, ReviewText, ReviewDate
+    FROM Reviews
+    WHERE ProductID = ? AND CustomerID = ?
+  `;
+
+  db.query(query, [productId, customerId], (err, results) => {
+    if (err) {
+      console.error('Error fetching customer review:', err);
+      return res.status(500).json({ error: 'Failed to fetch review' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'No review found for this product by the customer' });
+    }
+
+    // Return the customer's review
+    res.json(results[0]);
+  });
+});
+
 
 // API to get data from MySQL
 app.get('/data', (req, res) => {
